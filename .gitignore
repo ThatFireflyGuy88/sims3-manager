@@ -1,0 +1,12 @@
+# Build output
+.build/
+build/
+dist/
+*.xcodeproj/
+.swiftpm/
+
+# Local copies of EA's files and personal game settings — never publish
+ea-backup/
+
+# macOS
+.DS_Store
