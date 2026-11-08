@@ -39,19 +39,11 @@ The first time it reads your Documents and Downloads folders, macOS asks for per
 - Plain buttons send game shortcuts: pause, speeds, wall modes, floors, next Sim, Live/Buy/Build mode and more.
 - Two-state buttons (marked ⇄) alternate on each press: **Pause/Play** (P, then 1), **Change Speed** (fast, then ultra fast) and **Move Objects** (on, then off).
 - Cheat buttons open the game's cheat console (⌘⇧C, or ⌃⇧C if you choose), paste the cheat and press Enter.
-- **For Windows players:** choose **Profile for: Windows** and **Save Profile…** to make a profile for a friend's Windows PC. It uses Windows key codes and Ctrl+Shift+C for the console. Ready-made Windows profiles are also attached to each release.
+- **For Windows players:** see [Stream Deck Profile for Windows](#stream-deck-profile-for-windows) at the bottom of this page.
 
 ### Tools
 - Clear caches, set up the Mods folder, open the game folders, and locate the game.
 - **Skip the Launcher window:** makes the EA app open the game directly instead of the old EA Launcher. This edits one line in `Sims3Launcher.app/Contents/__Installer/installerdata.xml`, saving the original to `~/Library/Application Support/Sims3Manager/`. It only happens when you click the button, and **Restore EA's Original Setting** undoes it. An EA app Repair or update can switch it back; the Home screen tells you if that happens.
-
-## Playing on Windows?
-
-Sims 3 Manager is a Mac app. On Windows the EA Launcher works as intended, so most of what this app fixes isn't needed. What Windows players can use:
-
-- **Stream Deck profiles:** download *Sims 3 Stream Deck profiles (Windows).zip* from the latest release, pick the file for your Stream Deck model and double-click it. These are **experimental**: they haven't been tested on a Windows Stream Deck yet, so please report how they work in [Issues](../../issues).
-- **Mods:** put `.package` files in `Documents\Electronic Arts\The Sims 3\Mods\Packages` (with the standard `Resource.cfg` in `Mods`). The mods listed under *Recommended mods* in the app (NRaas Overwatch, ErrorTrap and Master Controller) work the same on Windows.
-- **Testing cheats on load:** the NRaas Overwatch setting described in the app works on Windows too.
 
 ## Building from source
 
@@ -75,3 +67,15 @@ The app has command-line test modes used during development, for example `--scan
 Sims 3 Manager is free software under the [GNU General Public License v3.0](LICENSE).
 
 It isn't made by, endorsed by or affiliated with Electronic Arts. The Sims is a trademark of Electronic Arts Inc. No EA artwork or game files are included: the pack badges and app icon are original, and the app only reads your own installed copy of the game.
+
+## Stream Deck Profile for Windows
+
+Sims 3 Manager is a Mac app, but Windows players can use its Stream Deck profile too. It has the same buttons (pause/play, speed, wall modes, next Sim, Live/Buy/Build mode and the Move Objects cheat) with Windows keys, and opens the cheat console with Ctrl+Shift+C.
+
+1. Download **Sims 3 Stream Deck profiles (Windows).zip** from the [latest release](../../releases).
+2. Unzip it and double-click the profile for your Stream Deck model (Neo, Mini, 15-key, + or XL).
+3. Stream Deck asks to import it. Switch to the "The Sims 3" profile while you play.
+
+On a Mac you can also make one yourself: in the Stream Deck page choose **Profile for: Windows**, then **Save Profile…**
+
+These profiles are **experimental**: they haven't been tested on a Windows Stream Deck yet. Please report how they work in [Issues](../../issues).
