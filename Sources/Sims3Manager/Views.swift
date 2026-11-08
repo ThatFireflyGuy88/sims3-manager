@@ -60,6 +60,7 @@ struct ContentView: View {
                 }
             }
             .toolbar {
+                if !store.screenshotMode {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: toggleMenu) {
                         Image(systemName: menuOpen ? "xmark" : "line.3.horizontal")
@@ -67,6 +68,7 @@ struct ContentView: View {
                     }
                     .help("Menu")
                     .keyboardShortcut("m", modifiers: [.command, .shift])
+                }
                 }
             }
         }
@@ -243,8 +245,9 @@ struct ModsView: View {
         } primaryAction: { ids in
             store.reveal(items(ids).map(\.url))
         }
-        .searchable(text: $query, prompt: "Search mods")
+        .searchableUnless(store.screenshotMode, text: $query, prompt: "Search mods")
         .toolbar {
+            if !store.screenshotMode {
             ToolbarItem(placement: .principal) {
                 Picker("Show", selection: $filter) {
                     ForEach(ModFilter.allCases) { Text($0.rawValue).tag($0) }
@@ -260,6 +263,7 @@ struct ModsView: View {
                 Button { confirmTrash = sel } label: { Label("Trash", systemImage: "trash") }
                     .disabled(sel.isEmpty)
                 Button { store.refresh() } label: { Label("Refresh", systemImage: "arrow.clockwise") }
+            }
             }
         }
         .navigationTitle("Mods")
@@ -344,5 +348,13 @@ struct ToolsView: View {
         }
         .formStyle(.grouped)
         .navigationTitle("Tools")
+    }
+}
+
+extension View {
+    /// Search field, left out while drawing README screenshots (it doesn't render offscreen).
+    @ViewBuilder
+    func searchableUnless(_ hide: Bool, text: Binding<String>, prompt: String) -> some View {
+        if hide { self } else { searchable(text: text, prompt: Text(prompt)) }
     }
 }

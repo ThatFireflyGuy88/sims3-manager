@@ -163,6 +163,12 @@ if args.first == "--deck-profile", args.count >= 2 {
     exit(0)
 }
 
+// --screenshots DIR   saves pictures of the main screens (for the README)
+if args.first == "--screenshots", args.count == 2 {
+    MainActor.assumeIsolated { Screenshotter.run(to: URL(fileURLWithPath: args[1])) }
+    exit(0)
+}
+
 if args.first == "--list-audio" {
     let def = AudioOutput.current()?.uid
     for d in AudioOutput.outputDevices() {

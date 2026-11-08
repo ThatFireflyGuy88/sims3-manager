@@ -5,6 +5,12 @@
  
 A Mac app that replaces the EA Sims 3 Launcher. It starts the game, manages your mods, imports custom content and builds Stream Deck controls, without the Launcher's crashing Downloads tab.
 
+![Sims 3 Manager's Home screen: the Play button, automatic display and sound settings, and the installed expansion and stuff packs](docs/screenshots/home.png)
+
+| Importing mods | Your mods | Stream Deck |
+|---|---|---|
+| ![Import mods section with drag-and-drop, automatic import and recommended mods](docs/screenshots/home-import.png) | ![Mods list with in-game names, types, status and location](docs/screenshots/mods.png) | ![Stream Deck page with the button layout for a Stream Deck Neo](docs/screenshots/stream-deck.png) |
+
 **Requires:** a Mac with Apple Silicon (M1 or newer), macOS 14 or later, and the 64-bit EA app version of The Sims 3.
 
 ## Installing
@@ -54,7 +60,7 @@ You need the Xcode Command Line Tools (`xcode-select --install`); full Xcode isn
 ./package.sh    # also makes dist/Sims 3 Manager <version>.zip (Apple Silicon only)
 ```
 
-The app has command-line test modes used during development, for example `--scan`, `--mod-names`, `--check FILE`, `--import-to DIR FILE…` and `--list-audio`. See `Sources/Sims3Manager/main.swift`.
+The app has command-line test modes used during development, for example `--scan`, `--mod-names`, `--check FILE`, `--import-to DIR FILE…`, `--list-audio` and `--screenshots DIR` (which redraws the README screenshots). See `Sources/Sims3Manager/main.swift`.
 
 ## Good to know
 
@@ -72,7 +78,7 @@ It isn't made by, endorsed by or affiliated with Electronic Arts. The Sims is a 
 
 Sims 3 Manager is a Mac app, but Windows players can use its Stream Deck profile too. It has the same buttons (pause/play, speed, wall modes, next Sim, Live/Buy/Build mode and the Move Objects cheat) with Windows keys, and opens the cheat console with Ctrl+Shift+C.
 
-1. Download **Sims 3 Stream Deck profiles (Windows).zip** from the [latest release](../../releases).
+1. Download **Sims.3.Stream.Deck.profiles.Windows.zip** from the [latest release](../../releases).
 2. Unzip it and double-click the profile for your Stream Deck model (Neo, Mini, 15-key, + or XL).
 3. Stream Deck asks to import it. Switch to the "The Sims 3" profile while you play.
 

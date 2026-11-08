@@ -88,6 +88,8 @@ final class Store: ObservableObject {
 
     @Published var pane: Pane = .play
     @Published var importExpanded = false
+    /// Set while drawing README screenshots: no Downloads watching, no toolbar buttons.
+    @Published var screenshotMode = false
     /// False while the app is in the background or its window is hidden, so animations stop.
     @Published var appVisible = true
 
@@ -740,7 +742,7 @@ final class Store: ObservableObject {
     // MARK: - Downloads folder
 
     private func pollDownloads() {
-        guard autoImportDownloads, !importing else { return }
+        guard autoImportDownloads, !importing, !screenshotMode else { return }
         let since = UserDefaults.standard.object(forKey: "watchDownloadsSince") as? Date ?? Date()
         var seenNow: [String: Int64] = [:]
         var ready: [URL] = []
