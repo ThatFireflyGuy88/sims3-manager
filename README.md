@@ -60,7 +60,7 @@ The app has command-line test modes used during development, for example `--scan
 
 - Importing lots and households has had little testing so far. Check that they appear in the game's Edit Town bin.
 - If your Sims 3 folder lives on an external drive, connect it before opening the app.
-- This is a beta (1.0-beta-2). Please report problems on the [Issues](../../issues) page.
+- This is a beta (1.0-beta-3). Please report problems on the [Issues](../../issues) page.
 
 ## Licence and trademarks
 
