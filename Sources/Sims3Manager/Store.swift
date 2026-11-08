@@ -140,12 +140,35 @@ final class Store: ObservableObject {
     @Published var audioDevice: AudioOutput.Device?
     @Published var outputDevices: [AudioOutput.Device] = []
 
+    /// Automatic display: the game runs in a 1080p window, which works on any Mac.
+    @Published var displayAutomatic: Bool {
+        didSet { UserDefaults.standard.set(displayAutomatic, forKey: "displayAutomatic") }
+    }
+    /// Automatic sound: the current output at 96 kHz, or the closest rate it supports.
+    @Published var soundAutomatic: Bool {
+        didSet { UserDefaults.standard.set(soundAutomatic, forKey: "soundAutomatic") }
+    }
+
+    var effectiveResolution: ResolutionChoice { displayAutomatic ? .windowed1080 : resolutionChoice }
+    /// Device UID Play switches to; "" means keep the current output.
+    var effectiveOutputUID: String { soundAutomatic ? "" : playOutputUID }
+    /// Rate Play switches the output to; 0 leaves it alone.
+    var effectiveRate: Double { soundAutomatic ? Store.automaticRate(for: playDevice) : playSampleRate }
+
+    /// 96 kHz is the widely reported fix for the Mac game's crackling sound. Devices that
+    /// can't reach it get their closest supported rate below it.
+    static func automaticRate(for device: AudioOutput.Device?) -> Double {
+        guard let device else { return 0 }
+        if device.supportedRates.contains(96000) { return 96000 }
+        return device.supportedRates.filter { $0 >= 44100 && $0 <= 96000 }.max() ?? 0
+    }
+
     /// The device Play will use: the chosen one if connected, otherwise nil when one is
     /// chosen but missing, otherwise the current output.
     var playDevice: AudioOutput.Device? {
-        playOutputUID.isEmpty ? audioDevice : outputDevices.first { $0.uid == playOutputUID }
+        effectiveOutputUID.isEmpty ? audioDevice : outputDevices.first { $0.uid == effectiveOutputUID }
     }
-    var playDeviceMissing: Bool { !playOutputUID.isEmpty && playDevice == nil }
+    var playDeviceMissing: Bool { !effectiveOutputUID.isEmpty && playDevice == nil }
 
     private var timer: Timer?
     private var wasRunning = false
@@ -165,6 +188,12 @@ final class Store: ObservableObject {
         playSampleRate = d.object(forKey: "playSampleRate") as? Double ?? 96000
         playOutputUID = d.string(forKey: "playOutputUID") ?? ""
         playOutputName = d.string(forKey: "playOutputName") ?? ""
+        // People who already picked something keep it as a manual (Advanced) choice.
+        displayAutomatic = d.object(forKey: "displayAutomatic") as? Bool
+            ?? (d.string(forKey: "resolution").map { $0 == ResolutionChoice.windowed1080.rawValue } ?? true)
+        soundAutomatic = d.object(forKey: "soundAutomatic") as? Bool
+            ?? ((d.string(forKey: "playOutputUID") ?? "").isEmpty
+                && (d.object(forKey: "playSampleRate") as? Double ?? 96000) == 96000)
         autoImportDownloads = d.object(forKey: "autoImportDownloads") as? Bool ?? true
         importedDownloads = Set(d.stringArray(forKey: "importedDownloads") ?? [])
         let device = SDDevice.all.first { $0.id == d.string(forKey: "deckDevice") } ?? SDDevice.detected() ?? SDDevice.all[0]
@@ -594,8 +623,8 @@ final class Store: ObservableObject {
     /// Writes the chosen resolution into Options.ini and switches the output sample rate.
     private func applyLaunchSettings() {
         let ini = paths.user.appendingPathComponent("Options.ini")
-        if resolutionChoice != .gameDefault, FileManager.default.fileExists(atPath: ini.path) {
-            do { try OptionsIni.apply(resolutionChoice, to: ini) } catch {
+        if effectiveResolution != .gameDefault, FileManager.default.fileExists(atPath: ini.path) {
+            do { try OptionsIni.apply(effectiveResolution, to: ini) } catch {
                 notice = "Couldn't set the resolution: \(error.localizedDescription)"
             }
         }
@@ -630,20 +659,20 @@ final class Store: ObservableObject {
 
         // A device that can't reach the rate wouldn't fix the crackle, so leave the sound
         // exactly as it is rather than switching halfway.
-        if playSampleRate > 0, !target.supportedRates.contains(playSampleRate) {
-            notice = "\(target.name) can't play at \(AudioOutput.label(playSampleRate)), so the sound was left as it is. Pick another device or rate in the sound menu."
+        if effectiveRate > 0, !target.supportedRates.contains(effectiveRate) {
+            notice = "\(target.name) can't play at \(AudioOutput.label(effectiveRate)), so the sound was left as it is. Pick another device or rate in the sound menu."
             return false
         }
-        if playSampleRate > 0, target.rate != playSampleRate {
-            if target.supportedRates.contains(playSampleRate) {
+        if effectiveRate > 0, target.rate != effectiveRate {
+            if target.supportedRates.contains(effectiveRate) {
                 if rates[target.uid] == nil { rates[target.uid] = target.rate }
                 restore["rates"] = rates
                 UserDefaults.standard.set(restore, forKey: "audioRestore")   // save before changing anything
-                if !AudioOutput.setRate(playSampleRate, on: target.id) {
-                    notice = "Couldn't switch \(target.name) to \(AudioOutput.label(playSampleRate))."
+                if !AudioOutput.setRate(effectiveRate, on: target.id) {
+                    notice = "Couldn't switch \(target.name) to \(AudioOutput.label(effectiveRate))."
                 }
             } else {
-                notice = "\(target.name) can't play at \(AudioOutput.label(playSampleRate)), so its sample rate was left at \(AudioOutput.label(target.rate))."
+                notice = "\(target.name) can't play at \(AudioOutput.label(effectiveRate)), so its sample rate was left at \(AudioOutput.label(target.rate))."
             }
         }
         if target.id != current.id {
@@ -655,7 +684,7 @@ final class Store: ObservableObject {
             }
         }
         refreshAudio()
-        return playSampleRate > 0 || !playOutputUID.isEmpty
+        return effectiveRate > 0 || !effectiveOutputUID.isEmpty
     }
 
     // MARK: - sound guard
@@ -681,13 +710,13 @@ final class Store: ObservableObject {
 
     private func guardTick() {
         // While the device is resetting it can vanish for a moment; just try again next tick.
-        let target = playOutputUID.isEmpty ? AudioOutput.current() : AudioOutput.device(uid: playOutputUID)
+        let target = effectiveOutputUID.isEmpty ? AudioOutput.current() : AudioOutput.device(uid: effectiveOutputUID)
         guard let target else { return }
-        if !playOutputUID.isEmpty, AudioOutput.current()?.uid != target.uid {
+        if !effectiveOutputUID.isEmpty, AudioOutput.current()?.uid != target.uid {
             if AudioOutput.makeDefault(target.id, wait: false) { guardFixes += 1 }
         }
-        if playSampleRate > 0, target.rate != playSampleRate, target.supportedRates.contains(playSampleRate) {
-            if AudioOutput.setRate(playSampleRate, on: target.id, wait: false) { guardFixes += 1 }
+        if effectiveRate > 0, target.rate != effectiveRate, target.supportedRates.contains(effectiveRate) {
+            if AudioOutput.setRate(effectiveRate, on: target.id, wait: false) { guardFixes += 1 }
         }
     }
 

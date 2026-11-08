@@ -4,6 +4,7 @@ import SwiftUI
 struct StreamDeckView: View {
     @EnvironmentObject var store: Store
     @State private var creating = false
+    @State private var platform: DeckPlatform = .mac
 
     private var slotCount: Int { store.deckDevice.columns * store.deckDevice.rows }
     private var layout: [SDAction] {
@@ -19,6 +20,14 @@ struct StreamDeckView: View {
                 if let detected = SDDevice.detected() {
                     Text("Found a \(detected.name) set up on this Mac.")
                         .font(.callout).foregroundStyle(.secondary)
+                }
+                Picker("Profile for", selection: $platform) {
+                    ForEach(DeckPlatform.allCases) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                if platform == .windows {
+                    Text("Experimental: for a friend playing the Windows game. It uses Windows key codes and Ctrl+Shift+C for the cheat console, but hasn't been tested on a Windows Stream Deck yet. Save it and send them the file.")
+                        .font(.callout).foregroundStyle(.orange)
                 }
             }
 
@@ -62,7 +71,7 @@ struct StreamDeckView: View {
                         Label("Add to Stream Deck", systemImage: "plus.square.on.square")
                     }
                     .buttonStyle(.borderedProminent)
-                    .disabled(creating)
+                    .disabled(creating || platform == .windows)
                     Button("Save Profile…") { saveProfile() }
                     Spacer()
                 }
@@ -96,7 +105,7 @@ struct StreamDeckView: View {
         let url = profileURL()
         do {
             try StreamDeckProfile.write(device: store.deckDevice, layout: layout, gameApp: store.gameURL,
-                                        consoleUsesControl: store.consoleUsesControl, to: url)
+                                        consoleUsesControl: store.consoleUsesControl, platform: platform, to: url)
             NSWorkspace.shared.open(url)
             store.notice = "Opened the profile in Stream Deck. Confirm the import there."
         } catch {
@@ -106,12 +115,12 @@ struct StreamDeckView: View {
 
     private func saveProfile() {
         let panel = NSSavePanel()
-        panel.nameFieldStringValue = "The Sims 3.streamDeckProfile"
+        panel.nameFieldStringValue = platform == .windows ? "The Sims 3 (Windows).streamDeckProfile" : "The Sims 3.streamDeckProfile"
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             try StreamDeckProfile.write(device: store.deckDevice, layout: layout, gameApp: store.gameURL,
-                                        consoleUsesControl: store.consoleUsesControl, to: url)
+                                        consoleUsesControl: store.consoleUsesControl, platform: platform, to: url)
             store.notice = "Saved \(url.lastPathComponent). Double-click it to import it into Stream Deck."
         } catch {
             store.notice = "Couldn't save the profile: \(error.localizedDescription)"

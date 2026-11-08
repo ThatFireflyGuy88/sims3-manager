@@ -147,12 +147,16 @@ if args.first == "--mod-names" {
 }
 
 // --deck-profile OUT   writes a Stream Deck profile with the default layout
-if args.first == "--deck-profile", args.count == 2 {
+// --deck-profile OUT [mac|windows] [MODEL]   (MODEL is a Stream Deck model code, e.g. 20GBJ9901)
+if args.first == "--deck-profile", args.count >= 2 {
     MainActor.assumeIsolated {
         let store = Store()
-        let device = SDDevice.detected() ?? SDDevice.all[0]
+        let platform: DeckPlatform = args.count > 2 && args[2].lowercased() == "windows" ? .windows : .mac
+        let device = (args.count > 3 ? SDDevice.all.first { $0.id == args[3] } : nil)
+            ?? SDDevice.detected() ?? SDDevice.all[0]
         do {
-            try StreamDeckProfile.write(device: device, layout: SDDevice.defaultLayout, gameApp: store.gameURL, to: URL(fileURLWithPath: args[1]))
+            try StreamDeckProfile.write(device: device, layout: SDDevice.defaultLayout, gameApp: store.gameURL,
+                                        platform: platform, to: URL(fileURLWithPath: args[1]))
             print("wrote profile for \(device.name)")
         } catch { print("error: \(error)") }
     }

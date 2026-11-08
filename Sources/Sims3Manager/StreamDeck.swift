@@ -3,27 +3,41 @@ import SwiftUI
 
 // MARK: - Keys
 
-/// A key as Stream Deck stores it: the macOS key code, Qt's key code, and modifiers.
+/// Which computer a profile is for: Stream Deck stores the platform's own key codes.
+enum DeckPlatform: String, CaseIterable, Identifiable {
+    case mac = "Mac", windows = "Windows"
+    var id: String { rawValue }
+}
+
+/// A key as Stream Deck stores it: the platform key code (macOS virtual key code, or
+/// Windows virtual-key code), Qt's key code, and modifiers.
 struct SDKey {
     let mac: Int
+    let win: Int
     let qt: Int
     var shift = false, ctrl = false, option = false, cmd = false
 
     var modifierMask: Int { (shift ? 1 : 0) | (ctrl ? 2 : 0) | (option ? 4 : 0) | (cmd ? 8 : 0) }
 
-    static func letter(_ c: Character, mac: Int) -> SDKey { SDKey(mac: mac, qt: Int(c.asciiValue!)) }
+    static func letter(_ c: Character, mac: Int) -> SDKey {
+        let code = Int(c.asciiValue!)   // Windows virtual-key codes for A–Z equal ASCII
+        return SDKey(mac: mac, win: code, qt: code)
+    }
     static let p = letter("P", mac: 35), n = letter("N", mac: 45), c = letter("C", mac: 8)
-    static func digit(_ d: Int) -> SDKey { SDKey(mac: [29, 18, 19, 20, 21][d], qt: 48 + d) }
-    static let space = SDKey(mac: 49, qt: 32)
-    static let returnKey = SDKey(mac: 36, qt: 0x0100_0004)
-    static let home = SDKey(mac: 115, qt: 0x0100_0010), end = SDKey(mac: 119, qt: 0x0100_0011)
-    static let pageUp = SDKey(mac: 116, qt: 0x0100_0016), pageDown = SDKey(mac: 121, qt: 0x0100_0017)
-    static let f1 = SDKey(mac: 122, qt: 0x0100_0030), f2 = SDKey(mac: 120, qt: 0x0100_0031)
-    static let f3 = SDKey(mac: 99, qt: 0x0100_0032), f10 = SDKey(mac: 109, qt: 0x0100_0039)
+    static func digit(_ d: Int) -> SDKey { SDKey(mac: [29, 18, 19, 20, 21][d], win: 48 + d, qt: 48 + d) }
+    static let space = SDKey(mac: 49, win: 0x20, qt: 32)
+    static let returnKey = SDKey(mac: 36, win: 0x0D, qt: 0x0100_0004)
+    static let home = SDKey(mac: 115, win: 0x24, qt: 0x0100_0010), end = SDKey(mac: 119, win: 0x23, qt: 0x0100_0011)
+    static let pageUp = SDKey(mac: 116, win: 0x21, qt: 0x0100_0016)
+    static let pageDown = SDKey(mac: 121, win: 0x22, qt: 0x0100_0017)
+    static let f1 = SDKey(mac: 122, win: 0x70, qt: 0x0100_0030), f2 = SDKey(mac: 120, win: 0x71, qt: 0x0100_0031)
+    static let f3 = SDKey(mac: 99, win: 0x72, qt: 0x0100_0032), f10 = SDKey(mac: 109, win: 0x79, qt: 0x0100_0039)
 
-    /// The cheat console: Cmd+Shift+C on the 64-bit Mac game (Ctrl+Shift+C on some setups).
-    static func console(control: Bool) -> SDKey {
-        SDKey(mac: 8, qt: 67, shift: true, ctrl: control, cmd: !control)
+    /// The cheat console: Cmd+Shift+C on the 64-bit Mac game (Ctrl+Shift+C on some Mac
+    /// setups, and always on Windows).
+    static func console(control: Bool, platform: DeckPlatform = .mac) -> SDKey {
+        let useControl = control || platform == .windows
+        return SDKey(mac: 8, win: 67, qt: 67, shift: true, ctrl: useControl, cmd: !useControl)
     }
 }
 
@@ -237,6 +251,7 @@ enum StreamDeckProfile {
     /// same 3.0 layout Stream Deck uses for its own profiles. With `gameApp`, the profile is
     /// linked to the game so Stream Deck switches to it whenever the game is in front.
     static func write(device: SDDevice, layout: [SDAction], gameApp: URL?, consoleUsesControl: Bool = false,
+                      platform: DeckPlatform = .mac,
                       to file: URL) throws {
         let fm = FileManager.default
         let stage = fm.temporaryDirectory.appendingPathComponent("sdprofile-\(UUID().uuidString)")
@@ -259,15 +274,15 @@ enum StreamDeckProfile {
             let key = "\(col),\(row)"
             switch behavior {
             case .keys(let keys):
-                actions[key] = hotkeyAction(keys, states: [keyState(titles.0, image)])
+                actions[key] = hotkeyAction(keys, platform: platform, states: [keyState(titles.0, image)])
             case .toggle(let first, let second):
-                actions[key] = hotkeySwitchAction(first, second,
+                actions[key] = hotkeySwitchAction(first, second, platform: platform,
                                                   states: [keyState(titles.0, image), keyState(titles.1, image)])
             case .cheats(let first, let second):
-                let console = SDKey.console(control: consoleUsesControl)
+                let console = SDKey.console(control: consoleUsesControl, platform: platform)
                 actions[key] = multiActionSwitch(
-                    [[hotkeyAction([console], states: [["Title": ""]], nested: true), pasteAction(first)],
-                     [hotkeyAction([console], states: [["Title": ""]], nested: true), pasteAction(second)]],
+                    [[hotkeyAction([console], platform: platform, states: [["Title": ""]], nested: true), pasteAction(first)],
+                     [hotkeyAction([console], platform: platform, states: [["Title": ""]], nested: true), pasteAction(second)]],
                     states: [keyState(titles.0, image), keyState(titles.1, image)])
             }
         }
@@ -292,7 +307,7 @@ enum StreamDeckProfile {
                       "Pages": [pageID.uuidString.lowercased()]],
             "Version": "3.0",
         ]
-        if let gameApp { top["AppIdentifier"] = gameApp.path }
+        if let gameApp, platform == .mac { top["AppIdentifier"] = gameApp.path }
         try json(top, to: profileDir.appendingPathComponent("manifest.json"))
 
         try? fm.removeItem(at: file)
@@ -307,10 +322,11 @@ enum StreamDeckProfile {
     // The formats below copy buttons made in the Stream Deck app (Stream Deck 7.4).
 
     /// Up to four key presses, padded with empty slots the way Stream Deck stores them.
-    private static func hotkeySlots(_ keys: [SDKey]) -> [[String: Any]] {
+    private static func hotkeySlots(_ keys: [SDKey], platform: DeckPlatform) -> [[String: Any]] {
         var slots: [[String: Any]] = keys.prefix(4).map { k in
             ["KeyCmd": k.cmd, "KeyCtrl": k.ctrl, "KeyModifiers": k.modifierMask, "KeyOption": k.option,
-             "KeyShift": k.shift, "NativeCode": k.mac, "QTKeyCode": k.qt, "VKeyCode": k.mac]
+             "KeyShift": k.shift, "NativeCode": platform == .mac ? k.mac : k.win, "QTKeyCode": k.qt,
+             "VKeyCode": platform == .mac ? k.mac : k.win]
         }
         while slots.count < 4 {
             slots.append(["KeyCmd": false, "KeyCtrl": false, "KeyModifiers": 0, "KeyOption": false,
@@ -331,12 +347,13 @@ enum StreamDeckProfile {
     }
 
     /// A plain Hotkey button, or (nested) a Hotkey step inside a Multi Action.
-    private static func hotkeyAction(_ keys: [SDKey], states: [[String: Any]], nested: Bool = false) -> [String: Any] {
+    private static func hotkeyAction(_ keys: [SDKey], platform: DeckPlatform, states: [[String: Any]],
+                                     nested: Bool = false) -> [String: Any] {
         var a: [String: Any] = [
             "ActionID": UUID().uuidString.lowercased(),
             "LinkedTitle": true,
             "Name": "Hotkey",
-            "Settings": ["Coalesce": true, "Hotkeys": hotkeySlots(keys)],
+            "Settings": ["Coalesce": true, "Hotkeys": hotkeySlots(keys, platform: platform)],
             "State": 0,
             "States": states,
             "UUID": "com.elgato.streamdeck.system.hotkey",
@@ -349,14 +366,15 @@ enum StreamDeckProfile {
     }
 
     /// Hotkey Switch: the first press sends `first`, the next sends `second`, and so on.
-    private static func hotkeySwitchAction(_ first: SDKey, _ second: SDKey, states: [[String: Any]]) -> [String: Any] {
+    private static func hotkeySwitchAction(_ first: SDKey, _ second: SDKey, platform: DeckPlatform,
+                                           states: [[String: Any]]) -> [String: Any] {
         [
             "ActionID": UUID().uuidString.lowercased(),
             "LinkedTitle": true,
             "Name": "Hotkey Switch",
             "Plugin": plugin("Hotkey Switch", "com.elgato.streamdeck.system.hotkeyswitch"),
             "Resources": NSNull(),
-            "Settings": ["Coalesce": true, "Hotkeys": hotkeySlots([first, second])],
+            "Settings": ["Coalesce": true, "Hotkeys": hotkeySlots([first, second], platform: platform)],
             "State": 0,
             "States": states,
             "UUID": "com.elgato.streamdeck.system.hotkeyswitch",

@@ -19,8 +19,9 @@ The first time it reads your Documents and Downloads folders, macOS asks for per
 
 ### Home
 - **Play** starts the game through the EA app, which still checks your license and signs you in.
-- **Resolution:** your choice is written into the game's `Options.ini` each time you press Play. **1080p window** is the default and the safe choice. The game can't draw at Retina resolution, so on a Retina or 4K screen it looks soft, and fullscreen modes draw more real pixels. But fullscreen at a resolution other than your screen's own (such as 1440p on a 4K screen) can make mouse clicks land in the wrong place.
-- **Sound:** the Mac version of the game crackles ("popcorn" sound) at some sample rates; 96 kHz is the most widely reported fix. Choose the device to play through and a rate. While the game runs, the app switches to them, and it keeps them in place if the output resets (HDMI TVs often drop back to 48 kHz when the game changes the screen mode). When you quit, your previous device and rates come back.
+- **Display and sound are automatic** unless you change them under **Advanced** in each menu:
+  - **Display:** the game runs in a 1080p window, which works on any Mac. Under Advanced you can choose a fullscreen mode; it draws more real pixels, but fullscreen at a resolution other than your screen's own (such as 1440p on a 4K screen) can make mouse clicks land in the wrong place. Your choice is written into the game's `Options.ini` each time you press Play.
+  - **Sound:** the Mac version of the game crackles ("popcorn" sound) at some sample rates; 96 kHz is the most widely reported fix. Automatic switches your current output to 96 kHz while the game runs (or the closest rate it supports). Under Advanced you can pick a specific device and rate. The app keeps the setting in place if the output resets (HDMI TVs often drop back to 48 kHz when the game changes the screen mode), and puts your previous device and rate back when you quit.
 - **Clear caches first** deletes the game's cache files before starting (they go to the Trash and the game rebuilds them). This helps after adding or removing mods.
 - **Testing cheats on load** explains how to switch it on with the NRaas Overwatch mod.
 - **Import mods:** drop `.package`, `.sims3pack` or `.zip` files, or folders, or double-click a `.sims3pack` in Finder. Objects and Create-a-Sim items go to `Mods/Packages`, lots and households to `Library`, and worlds to `InstalledWorlds`. While the app is open, Sims 3 mods you download are imported automatically (Sims 4 mods are ignored). EA Store content is encrypted and can't be installed on a Mac by any tool, so it's refused with an explanation.
@@ -38,10 +39,19 @@ The first time it reads your Documents and Downloads folders, macOS asks for per
 - Plain buttons send game shortcuts: pause, speeds, wall modes, floors, next Sim, Live/Buy/Build mode and more.
 - Two-state buttons (marked ⇄) alternate on each press: **Pause/Play** (P, then 1), **Change Speed** (fast, then ultra fast) and **Move Objects** (on, then off).
 - Cheat buttons open the game's cheat console (⌘⇧C, or ⌃⇧C if you choose), paste the cheat and press Enter.
+- **For Windows players:** choose **Profile for: Windows** and **Save Profile…** to make a profile for a friend's Windows PC. It uses Windows key codes and Ctrl+Shift+C for the console. Ready-made Windows profiles are also attached to each release.
 
 ### Tools
 - Clear caches, set up the Mods folder, open the game folders, and locate the game.
 - **Skip the Launcher window:** makes the EA app open the game directly instead of the old EA Launcher. This edits one line in `Sims3Launcher.app/Contents/__Installer/installerdata.xml`, saving the original to `~/Library/Application Support/Sims3Manager/`. It only happens when you click the button, and **Restore EA's Original Setting** undoes it. An EA app Repair or update can switch it back; the Home screen tells you if that happens.
+
+## Playing on Windows?
+
+Sims 3 Manager is a Mac app. On Windows the EA Launcher works as intended, so most of what this app fixes isn't needed. What Windows players can use:
+
+- **Stream Deck profiles:** download *Sims 3 Stream Deck profiles (Windows).zip* from the latest release, pick the file for your Stream Deck model and double-click it. These are **experimental**: they haven't been tested on a Windows Stream Deck yet, so please report how they work in [Issues](../../issues).
+- **Mods:** put `.package` files in `Documents\Electronic Arts\The Sims 3\Mods\Packages` (with the standard `Resource.cfg` in `Mods`). The mods listed under *Recommended mods* in the app (NRaas Overwatch, ErrorTrap and Master Controller) work the same on Windows.
+- **Testing cheats on load:** the NRaas Overwatch setting described in the app works on Windows too.
 
 ## Building from source
 

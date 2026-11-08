@@ -169,35 +169,43 @@ struct PlayView: View {
 
                 HStack(spacing: 10) {
                     Menu {
-                        Picker("Resolution", selection: $store.resolutionChoice) {
-                            ForEach(ResolutionChoice.allCases) { Text($0.label).tag($0) }
+                        Toggle("Automatic (1080p window)", isOn: $store.displayAutomatic)
+                        Section("Advanced") {
+                            Picker("Resolution", selection: resolutionBinding) {
+                                ForEach(ResolutionChoice.allCases) { Text($0.label).tag($0) }
+                            }
+                            .pickerStyle(.inline)
                         }
-                        .pickerStyle(.inline)
                     } label: {
-                        OptionChip(icon: "display", text: store.resolutionChoice.short)
+                        OptionChip(icon: "display",
+                                   text: store.displayAutomatic ? "Auto · 1080p" : store.resolutionChoice.short)
                     }
                     .menuStyle(.button)
                     .buttonStyle(.plain)
                     .menuIndicator(.hidden)
                     .fixedSize()
-                    .help("Resolution the game starts in. 1080p window is the safe choice. Fullscreen at a resolution other than your screen's own (such as 1440p on a 4K screen) can make clicks land in the wrong place.")
+                    .help("Automatic runs the game in a 1080p window, which works on any Mac. Under Advanced you can pick a fullscreen mode instead, but fullscreen at a resolution other than your screen's own (such as 1440p on a 4K screen) can make clicks land in the wrong place.")
 
                     Menu {
-                        Picker("Play sound through", selection: outputBinding) {
-                            Text("Current output (\(store.audioDevice?.name ?? "none"))").tag("")
-                            ForEach(store.outputDevices, id: \.uid) { dev in
-                                Text(dev.name).tag(dev.uid)
+                        Toggle("Automatic (current output, 96 kHz)", isOn: $store.soundAutomatic)
+                        Section("Advanced") {
+                            Picker("Play sound through", selection: outputBinding) {
+                                Text("Current output (\(store.audioDevice?.name ?? "none"))").tag("")
+                                ForEach(store.outputDevices, id: \.uid) { dev in
+                                    Text(dev.name).tag(dev.uid)
+                                }
+                                if !store.playOutputUID.isEmpty,
+                                   !store.outputDevices.contains(where: { $0.uid == store.playOutputUID }) {
+                                    Text("\(store.playOutputName) (not connected)").tag(store.playOutputUID)
+                                }
                             }
-                            if store.playDeviceMissing {
-                                Text("\(store.playOutputName) (not connected)").tag(store.playOutputUID)
+                            .pickerStyle(.inline)
+                            Picker("Sample rate", selection: rateBinding) {
+                                Text("Don't change").tag(0.0)
+                                ForEach(soundRates, id: \.self) { Text(AudioOutput.label($0)).tag($0) }
                             }
+                            .pickerStyle(.inline)
                         }
-                        .pickerStyle(.inline)
-                        Picker("Sample rate", selection: $store.playSampleRate) {
-                            Text("Don't change").tag(0.0)
-                            ForEach(soundRates, id: \.self) { Text(AudioOutput.label($0)).tag($0) }
-                        }
-                        .pickerStyle(.inline)
                     } label: {
                         OptionChip(icon: "speaker.wave.2.fill", text: soundLabel, warning: soundUnsupported)
                     }
@@ -218,27 +226,46 @@ struct PlayView: View {
         }
     }
 
+    // Choosing anything under Advanced switches that setting to manual.
+    private var resolutionBinding: Binding<ResolutionChoice> {
+        Binding(get: { store.resolutionChoice }, set: {
+            store.resolutionChoice = $0
+            store.displayAutomatic = false
+        })
+    }
+
     private var outputBinding: Binding<String> {
         Binding(get: { store.playOutputUID }, set: { uid in
             store.playOutputUID = uid
             if let dev = store.outputDevices.first(where: { $0.uid == uid }) { store.playOutputName = dev.name }
+            store.soundAutomatic = false
+        })
+    }
+
+    private var rateBinding: Binding<Double> {
+        Binding(get: { store.playSampleRate }, set: {
+            store.playSampleRate = $0
+            store.soundAutomatic = false
         })
     }
 
     private var soundRates: [Double] {
-        var rates = store.playDevice?.supportedRates.filter { $0 >= 32000 } ?? [44100, 48000, 96000]
+        let device = store.playOutputUID.isEmpty ? store.audioDevice
+            : store.outputDevices.first { $0.uid == store.playOutputUID }
+        var rates = device?.supportedRates.filter { $0 >= 32000 } ?? [44100, 48000, 96000]
         if store.playSampleRate > 0, !rates.contains(store.playSampleRate) { rates.append(store.playSampleRate) }
         return rates.sorted()
     }
 
     private var soundUnsupported: Bool {
         if store.playDeviceMissing { return true }
-        guard store.playSampleRate > 0, let dev = store.playDevice else { return false }
-        return !dev.supportedRates.contains(store.playSampleRate)
+        guard store.effectiveRate > 0, let dev = store.playDevice else { return false }
+        return !dev.supportedRates.contains(store.effectiveRate)
     }
 
     private var soundLabel: String {
-        let rate = store.playSampleRate > 0 ? AudioOutput.label(store.playSampleRate) : "rate as is"
+        let rate = store.effectiveRate > 0 ? AudioOutput.label(store.effectiveRate) : "rate as is"
+        if store.soundAutomatic { return "Auto · \(rate)" }
         if store.playOutputUID.isEmpty { return store.playSampleRate > 0 ? rate : "Sound as is" }
         return "\(store.playOutputName) · \(rate)"
     }
@@ -249,17 +276,21 @@ struct PlayView: View {
         }
         guard let dev = store.playDevice else { return "Sound output while the game runs." }
         var parts: [String] = []
-        if !store.playOutputUID.isEmpty, dev.uid != store.audioDevice?.uid {
+        if store.soundAutomatic {
+            parts.append("Automatic: the current output, \(dev.name),")
+        } else if !store.playOutputUID.isEmpty, dev.uid != store.audioDevice?.uid {
             parts.append("While the game runs, sound plays through \(dev.name)")
         } else {
             parts.append("Sound plays through \(dev.name)")
         }
-        if store.playSampleRate == 0 {
+        if store.effectiveRate == 0 {
             parts.append("at its current \(AudioOutput.label(dev.rate)).")
         } else if soundUnsupported {
-            parts.append("but it can't run at \(AudioOutput.label(store.playSampleRate)), so the rate is left alone.")
+            parts.append("but it can't run at \(AudioOutput.label(store.effectiveRate)), so the rate is left alone.")
         } else {
-            parts.append("at \(AudioOutput.label(store.playSampleRate)).")
+            parts.append("at \(AudioOutput.label(store.effectiveRate))"
+                         + (store.soundAutomatic && store.effectiveRate != 96000
+                            ? " (it can't reach 96 kHz, the usual fix for crackling sound)." : "."))
         }
         return parts.joined(separator: " ") + " Everything goes back when the game quits."
     }
