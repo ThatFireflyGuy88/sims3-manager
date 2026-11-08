@@ -1,5 +1,8 @@
-# Sims 3 Manager
+# The Sims 3 Manager for Apple Silicon
 
+> [!IMPORTANT]
+> This software was complied using Claude Code and is provided as-is. It is unlikely to get major updates. Please feel free to fork and improve upon this code.
+ 
 A Mac app that replaces the EA Sims 3 Launcher. It starts the game, manages your mods, imports custom content and builds Stream Deck controls, without the Launcher's crashing Downloads tab.
 
 **Requires:** a Mac with Apple Silicon (M1 or newer), macOS 14 or later, and the 64-bit EA app version of The Sims 3.
